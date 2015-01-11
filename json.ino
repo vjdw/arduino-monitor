@@ -9,7 +9,7 @@ String getJsonValue(const String& json, String key)
   int valueEnd = json.indexOf(',', valueStart);
   String value = json.substring(valueStart, valueEnd);
   
-  //Serial.println("Found value = " + value + " for key = " + key);
+  trace("Found value = " + value + " for key = " + key);
   
   return value;
 }

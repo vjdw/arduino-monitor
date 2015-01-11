@@ -13,3 +13,14 @@ String getJsonValue(const String& json, String key)
   
   return value;
 }
+
+String getJsonTextValue(const String& json, String key)
+{
+  String jsonValue = getJsonValue(json, key);
+  return jsonValue.substring(1, jsonValue.length() - 1);
+}
+
+int getJsonNumberValue(const String& json, String key)
+{
+  return getJsonValue(json, key).toInt();
+}

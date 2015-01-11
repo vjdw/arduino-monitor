@@ -58,11 +58,10 @@ void setup() {
   String weatherJson = getWeatherJson();
   Serial.println(weatherJson);
  
-  String temperature = getJsonValue(weatherJson, "temp");
-  int temperatureCelsius = temperature.toInt() - 279;
-  String weatherDescription = getJsonValue(weatherJson, "description");
+  int temperature = getJsonNumberValue(weatherJson, "temp") - 273;
+  String weatherDescription = getJsonTextValue(weatherJson, "description");
   
-  String weatherText = String(temperatureCelsius) + "'C " + weatherDescription;
+  String weatherText = String(temperature) + "'C " + weatherDescription;
   
   Serial.println(weatherText);
 }

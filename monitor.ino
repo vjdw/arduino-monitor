@@ -2,15 +2,22 @@
 #include <SPI.h>
 #include <Ethernet.h>
 
+const int LCD_COLS = 16;
 const boolean TRACE_ENABLED = true;
-const int WEATHER_API_POLL_MS = 6000;
+const int MAIN_LOOP_DELAY_MS = 250;
+const long WEATHER_API_POLL_MS = 3600000; // 1 hour
+
+long loopTimeCount = 0;
+String weather = "Weather not yet acquired.";
 
 // Enter a MAC address for your controller below.
 // Newer Ethernet shields have a MAC address printed on a sticker on the shield
 byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
 
 // Set the static IP address to use if the DHCP fails to assign
-IPAddress ip(192,168,0,177);
+IPAddress ip(192,168,0,178);
+
+LiquidCrystal lcd(8, 9, 4, 5, 6, 7);
 
 void setup() {
  // Open serial communications and wait for port to open:
@@ -19,6 +26,11 @@ void setup() {
     ; // wait for serial port to connect. Needed for Leonardo only
   }
 
+  lcd.begin(LCD_COLS, 2);
+  lcd.setCursor(0,0);
+  
+  lcd.print("Getting weather...");
+
   // start the Ethernet connection:
   if (Ethernet.begin(mac) == 0) {
     trace("Failed to configure Ethernet using DHCP");
@@ -26,16 +38,37 @@ void setup() {
     // try to congifure using IP address instead of DHCP:
     Ethernet.begin(mac, ip);
   }
+
   // give the Ethernet shield a second to initialize:
   delay(1000);
 }
 
 void loop()
-{  
-  String weather = getWeather();
-  trace(weather);
+{
+  trace(String("loopTimeCount = ") + String(loopTimeCount));
   
-  delay(WEATHER_API_POLL_MS);
+  if (loopTimeCount == 0)
+  {
+    lcd.clear();
+    lcd.print("Getting weather...");
+    weather = getWeather();
+    lcd.clear();
+    lcd.print(weather);
+    trace(weather);
+  }
+
+  if (weather.length() > LCD_COLS)
+  {
+    lcd.scrollDisplayLeft();
+  }
+   
+  loopTimeCount += MAIN_LOOP_DELAY_MS;
+  if (loopTimeCount >= WEATHER_API_POLL_MS)
+  {
+    loopTimeCount = 0;
+  }
+  
+  delay(MAIN_LOOP_DELAY_MS);  
 }
 
 void trace(const String& message)
@@ -90,7 +123,7 @@ String getWeather()
     int temperature = getJsonNumberValue(weatherJson, "temp") - 273;
     String weatherDescription = getJsonTextValue(weatherJson, "description");
 
-    weatherText = String(temperature) + "'C " + weatherDescription;
+    weatherText = String(temperature) + char(223) + "C " + weatherDescription;
   }
   
   return weatherText;

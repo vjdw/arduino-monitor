@@ -9,7 +9,7 @@ String getJsonValue(const String& json, String key)
   int valueEnd = json.indexOf(',', valueStart);
   String value = json.substring(valueStart, valueEnd);
   
-  trace("Found value = " + value + " for key = " + key);
+  //trace(String("Found value = ") + String(value) + String(" for key = ") + String(key));
   
   return value;
 }

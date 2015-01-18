@@ -3,12 +3,17 @@
 #include <Ethernet.h>
 
 const int LCD_COLS = 16;
+const int LCD_COLS_FOR_TEMP = 4;
 const boolean TRACE_ENABLED = true;
 const int MAIN_LOOP_DELAY_MS = 250;
 const long WEATHER_API_POLL_MS = 3600000; // 1 hour
 
 long loopTimeCount = 0;
-String weather = "Weather not yet acquired.";
+int weatherDescriptionScrollLocation = 0;
+String weatherDescription;
+String weatherHumidity;
+String weatherPressure;
+String weatherTemperature;
 
 // Enter a MAC address for your controller below.
 // Newer Ethernet shields have a MAC address printed on a sticker on the shield
@@ -46,29 +51,38 @@ void setup() {
 void loop()
 {
   trace(String("loopTimeCount = ") + String(loopTimeCount));
-  
-  if (loopTimeCount == 0)
-  {
+ 
+  if (loopTimeCount == 0) {
     lcd.clear();
     lcd.print("Getting weather...");
-    weather = getWeather();
-    lcd.clear();
-    lcd.print(weather);
-    trace(weather);
+    getWeather(weatherTemperature, weatherDescription, weatherHumidity, weatherPressure);
+    weatherDescription = weatherDescription + " P:" + weatherPressure + " H:" + weatherHumidity + " - ";
+    trace(weatherDescription);
   }
-
-  if (weather.length() > LCD_COLS)
-  {
-    lcd.scrollDisplayLeft();
-  }
-   
   loopTimeCount += MAIN_LOOP_DELAY_MS;
-  if (loopTimeCount >= WEATHER_API_POLL_MS)
-  {
+  if (loopTimeCount >= WEATHER_API_POLL_MS) {
     loopTimeCount = 0;
   }
-  
-  delay(MAIN_LOOP_DELAY_MS);  
+  delay(MAIN_LOOP_DELAY_MS);
+
+  // On characters 4 to 15 of LCD row 0, scroll through weather description (everything except temperature, which is fixed on characters 0 to 3).
+  lcd.clear();   
+  lcd.setCursor(LCD_COLS_FOR_TEMP,0);
+  String substringForScroll = weatherDescription.substring(weatherDescriptionScrollLocation++);
+  if (substringForScroll.length() > (LCD_COLS - LCD_COLS_FOR_TEMP)) {
+    lcd.print(substringForScroll);
+  }
+  else {
+    // To fake endless scrolling, append first few characters of the description when substringForScroll is getting short.
+    lcd.print(substringForScroll + weatherDescription.substring(0, (LCD_COLS - LCD_COLS_FOR_TEMP)));
+  }
+  if (weatherDescriptionScrollLocation > weatherDescription.length()) {
+    weatherDescriptionScrollLocation = 0;
+  }
+    
+  // Temperature display doesn't scroll, position is fixed.
+  lcd.setCursor(0,0);
+  lcd.print(weatherTemperature);
 }
 
 void trace(const String& message)
@@ -79,7 +93,7 @@ void trace(const String& message)
   }
 }
 
-String getWeather()
+void getWeather(String& temperature, String& description, String& humidity, String& pressure)
 {
   // if you don't want to use DNS (and reduce your sketch size)
   // use the numeric IP instead of the name for the server:
@@ -104,9 +118,8 @@ String getWeather()
     client.println();
   } 
   else {
-    // kf you didn't get a connection to the server:
     trace("connection failed");
-    return "";
+    return;
   }
   
   while (!client.available())
@@ -114,29 +127,32 @@ String getWeather()
   
   String weatherJson = readResponse(client);
   
-  String weatherText = String();
-  
   // Sometimes get an HTTP error code of 511, and no JSON content.
   // This is a quick check that we have more than just HTTP headers in the response.
-  if (weatherJson.length() > 250)
+  if (weatherJson.length() > 150)
   {
-    int temperature = getJsonNumberValue(weatherJson, "temp") - 273;
-    String weatherDescription = getJsonTextValue(weatherJson, "description");
+    temperature = String(getJsonNumberValue(weatherJson, "temp") - 273) + char(223) + "C";
 
-    weatherText = String(temperature) + char(223) + "C " + weatherDescription;
+    description = getJsonTextValue(weatherJson, "description");
+    humidity = String(getJsonNumberValue(weatherJson, "humidity")) + "%";
+    pressure = String(getJsonNumberValue(weatherJson, "pressure"));
   }
-  
-  return weatherText;
 }
 
 String readResponse(EthernetClient& client)
 {
   String response = String();
+  boolean foundJsonStart = false;
+  char currentChar;
   
   // if there are incoming bytes available 
   // from the server, read them and print them:
   while (client.available()) {
-    response += String((char)client.read());
+    currentChar = (char)client.read();
+    foundJsonStart = foundJsonStart || currentChar == '{';
+    if (foundJsonStart) {
+      response += currentChar;
+    }
   }
 
   // if the server's disconnected, stop the client:

@@ -20,7 +20,19 @@ String getJsonTextValue(const String& json, String key)
   return jsonValue.substring(1, jsonValue.length() - 1);
 }
 
-int getJsonNumberValue(const String& json, String key)
+int getJsonIntValue(const String& json, String key)
 {
   return getJsonValue(json, key).toInt();
+}
+
+float getJsonFloatValue(const String& json, String key)
+{
+  return toFloat(getJsonValue(json, key));
+}
+
+float toFloat(const String& str)
+{
+  char buffer[10];
+  str.toCharArray(buffer, 10);
+  return atof(buffer);
 }

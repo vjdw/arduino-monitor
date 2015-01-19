@@ -131,11 +131,11 @@ void getWeather(String& temperature, String& description, String& humidity, Stri
   // This is a quick check that we have more than just HTTP headers in the response.
   if (weatherJson.length() > 150)
   {
-    temperature = String(getJsonNumberValue(weatherJson, "temp") - 273) + char(223) + "C";
+    temperature = String((int)(getJsonFloatValue(weatherJson, "temp") - 273.15)) + char(223) + "C";
 
     description = getJsonTextValue(weatherJson, "description");
-    humidity = String(getJsonNumberValue(weatherJson, "humidity")) + "%";
-    pressure = String(getJsonNumberValue(weatherJson, "pressure"));
+    humidity = String(getJsonIntValue(weatherJson, "humidity")) + "%";
+    pressure = String(getJsonIntValue(weatherJson, "pressure"));
   }
 }
 

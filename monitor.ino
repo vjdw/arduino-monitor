@@ -95,6 +95,19 @@ void loop()
   // Temperature display doesn't scroll, position is fixed.
   lcd.setCursor(0,0);
   lcd.print(weatherTemperature);
+  
+  // On the second row, display time since weather last updated.
+  lcd.setCursor(0,1);
+  int seconds = (loopTimeCount % 60000) / 1000;
+  lcd.print(String((loopTimeCount / 60000)) + "m" + (seconds < 10 ? "0" : "") + (seconds) + "s");
+  
+  checkButtonState();
+}
+
+void formatTimeDigits(char strOut[2], int num)
+{
+  strOut[0] = '0' + (num / 10);
+  strOut[1] = '0' + (num % 10);
 }
 
 void trace(const String& message)

@@ -2,11 +2,16 @@
 #include <SPI.h>
 #include <Ethernet.h>
 
+// These come from json.ino
+extern const float FLOAT_VAL_NOT_FOUND;
+extern const int INT_VAL_NOT_FOUND;
+
 const int LCD_COLS = 16;
 const int LCD_COLS_FOR_TEMP = 4;
 const boolean TRACE_ENABLED = true;
-const int MAIN_LOOP_DELAY_MS = 250;
+const int LOOP_DELAY_MS = 250;
 const long WEATHER_API_POLL_MS = 3600000; // 1 hour
+const int NETWORK_TIMEOUT_MS = 5000;
 
 long loopTimeCount = 0;
 int weatherDescriptionScrollLocation = 0;
@@ -55,15 +60,22 @@ void loop()
   if (loopTimeCount == 0) {
     lcd.clear();
     lcd.print("Getting weather...");
-    getWeather(weatherTemperature, weatherDescription, weatherHumidity, weatherPressure);
-    weatherDescription = weatherDescription + " P:" + weatherPressure + " H:" + weatherHumidity + " - ";
+
+    // If getWeather errors (returns false) then weatherDescription should contain the error message, so don't modify it.    
+    if (getWeather(weatherTemperature, weatherDescription, weatherHumidity, weatherPressure))
+    {
+      weatherDescription = weatherDescription + " P:" + weatherPressure + " H:" + weatherHumidity;
+    }
+    
+    weatherDescription = weatherDescription + " - ";
+    
     trace(weatherDescription);
   }
-  loopTimeCount += MAIN_LOOP_DELAY_MS;
+  loopTimeCount += LOOP_DELAY_MS;
   if (loopTimeCount >= WEATHER_API_POLL_MS) {
     loopTimeCount = 0;
   }
-  delay(MAIN_LOOP_DELAY_MS);
+  delay(LOOP_DELAY_MS);
 
   // On characters 4 to 15 of LCD row 0, scroll through weather description (everything except temperature, which is fixed on characters 0 to 3).
   lcd.clear();   
@@ -76,7 +88,7 @@ void loop()
     // To fake endless scrolling, append first few characters of the description when substringForScroll is getting short.
     lcd.print(substringForScroll + weatherDescription.substring(0, (LCD_COLS - LCD_COLS_FOR_TEMP)));
   }
-  if (weatherDescriptionScrollLocation > weatherDescription.length()) {
+  if (weatherDescriptionScrollLocation >= weatherDescription.length()) {
     weatherDescriptionScrollLocation = 0;
   }
     
@@ -93,8 +105,12 @@ void trace(const String& message)
   }
 }
 
-void getWeather(String& temperature, String& description, String& humidity, String& pressure)
+boolean getWeather(String& temperature, String& description, String& humidity, String& pressure)
 {
+  boolean errorOccurred = false;
+  
+  weatherDescription = "";
+  
   // if you don't want to use DNS (and reduce your sketch size)
   // use the numeric IP instead of the name for the server:
   //IPAddress server(74,125,232,128);  // numeric IP for Google (no DNS)
@@ -106,7 +122,7 @@ void getWeather(String& temperature, String& description, String& humidity, Stri
   EthernetClient client;
   
   trace("connecting...");
-  
+
   // if you get a connection, report back via serial:
   if (client.connect(server, 80)) {
     trace("connected");
@@ -119,24 +135,67 @@ void getWeather(String& temperature, String& description, String& humidity, Stri
   } 
   else {
     trace("connection failed");
-    return;
+    weatherDescription = "connection failed";
+    errorOccurred = true;
   }
   
-  while (!client.available())
-    delay(100);
-  
-  String weatherJson = readResponse(client);
-  
-  // Sometimes get an HTTP error code of 511, and no JSON content.
-  // This is a quick check that we have more than just HTTP headers in the response.
-  if (weatherJson.length() > 150)
+  if (!errorOccurred)
   {
-    temperature = String((int)(getJsonFloatValue(weatherJson, "temp") - 273.15)) + char(223) + "C";
+    int timeoutRemaining = NETWORK_TIMEOUT_MS;
+    while (timeoutRemaining > 0 && !client.available())
+    {
+      delay(LOOP_DELAY_MS);
+      timeoutRemaining -= LOOP_DELAY_MS;
+    }
+    if (!client.available())
+    {
+      trace("client not available");
+      weatherDescription = "client  not available";
+      errorOccurred = true;
+    }
+  }
+  
+  if (!errorOccurred)
+  {
+    String weatherJson = readResponse(client);
+
+    float tempKelvin = getJsonFloatValue(weatherJson, "temp");
+    if (tempKelvin == FLOAT_VAL_NOT_FOUND)
+    {
+      temperature = "err";
+      errorOccurred = true;
+    }
+    else
+    {
+      temperature = String((int)(tempKelvin - 273.15)) + char(223) + "C";
+    }
 
     description = getJsonTextValue(weatherJson, "description");
-    humidity = String(getJsonIntValue(weatherJson, "humidity")) + "%";
-    pressure = String(getJsonIntValue(weatherJson, "pressure"));
+    
+    int jsonInt = getJsonIntValue(weatherJson, "humidity");
+    if (jsonInt == INT_VAL_NOT_FOUND)
+    {
+      humidity = "err";
+      errorOccurred = true;
+    }
+    else
+    {
+      humidity = String(getJsonIntValue(weatherJson, "humidity")) + "%";
+    }
+      
+    jsonInt = getJsonIntValue(weatherJson, "pressure");
+    if (jsonInt == INT_VAL_NOT_FOUND)
+    {
+      pressure = "err";
+      errorOccurred = true;
+    }
+    else
+    {
+      pressure = String(getJsonIntValue(weatherJson, "pressure"));
+    }
   }
+  
+  return !errorOccurred;
 }
 
 String readResponse(EthernetClient& client)

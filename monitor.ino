@@ -66,6 +66,11 @@ void loop()
     {
       weatherDescription = weatherDescription + " P:" + weatherPressure + " H:" + weatherHumidity;
     }
+    else
+    {
+      // If getting weather failed don't wait an hour to retry, try again in 5 minutes.
+      loopTimeCount = 19 * (WEATHER_API_POLL_MS / 20);
+    }
     
     weatherDescription = weatherDescription + " - ";
     
@@ -96,11 +101,13 @@ void loop()
   lcd.setCursor(0,0);
   lcd.print(weatherTemperature);
   
-  // On the second row, display time since weather last updated.
+  // On the second row, display time until next weather update.
   lcd.setCursor(0,1);
-  int seconds = (loopTimeCount % 60000) / 1000;
-  lcd.print(String((loopTimeCount / 60000)) + "m" + (seconds < 10 ? "0" : "") + (seconds) + "s");
+  int timeRemaining = WEATHER_API_POLL_MS - loopTimeCount;
+  int seconds = (timeRemaining % 60000) / 1000;
+  lcd.print(String((timeRemaining / 60000)) + "m" + (seconds < 10 ? "0" : "") + (seconds) + "s");
   
+  // This will send messages to MPD when buttons are pressed.
   checkButtonState();
 }
 

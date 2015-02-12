@@ -5,14 +5,14 @@
 #define BTN_SELECT 4
 #define BTN_NONE   5
 
+const char* MPD_HOST_NAME = "frapefruit";
+const int MPD_HOST_PORT = 6600;
+
 int buttonDownAtLastCheck = BTN_NONE;
 
 void checkButtonState()
 {
   int buttonDownNow = readLcdButtons();
-
-  trace(String("buttonDownNow = ") + buttonDownNow + " lastCheck = " + buttonDownAtLastCheck);
-
 
   if (buttonDownNow != BTN_NONE)  
   {
@@ -78,7 +78,7 @@ void sendMpdMessage(String message)
   EthernetClient client;
   
   // if you get a connection, report back via serial:
-  if (client.connect("frapefruit", 6600)) {
+  if (client.connect(MPD_HOST_NAME, MPD_HOST_PORT)) {
     trace("connected");
 
     client.println(message);
@@ -94,7 +94,7 @@ void mpdAddAllAndPlayRandom()
   EthernetClient client;
   
   // if you get a connection, report back via serial:
-  if (client.connect("hunchcorn", 6600)) {
+  if (client.connect(MPD_HOST_NAME, MPD_HOST_PORT)) {
     trace("connected");
 
     client.println("clear\n");    // clears current playlist.

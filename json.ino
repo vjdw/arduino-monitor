@@ -34,7 +34,7 @@ String getJsonTextValue(const String& json, String key)
 
 int getJsonIntValue(const String& json, String key)
 {
-  int intFromJson = -9999;
+  int intFromJson = INT_VAL_NOT_FOUND;
   String jsonValue = getJsonValue(json, key);
   
   if (jsonValue.length() > 0)
@@ -45,7 +45,7 @@ int getJsonIntValue(const String& json, String key)
 
 float getJsonFloatValue(const String& json, String key)
 {
-  float floatFromJson = -9999;
+  float floatFromJson = FLOAT_VAL_NOT_FOUND;
   String jsonValue = getJsonValue(json, key);
 
   if (jsonValue.length() > 0)

@@ -103,7 +103,7 @@ void loop()
   
   // On the second row, display time until next weather update.
   lcd.setCursor(0,1);
-  int timeRemaining = WEATHER_API_POLL_MS - loopTimeCount;
+  long timeRemaining = WEATHER_API_POLL_MS - loopTimeCount;
   int seconds = (timeRemaining % 60000) / 1000;
   lcd.print(String((timeRemaining / 60000)) + "m" + (seconds < 10 ? "0" : "") + (seconds) + "s");
   

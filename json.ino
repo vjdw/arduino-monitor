@@ -10,9 +10,15 @@ void getJsonValue(const String& json, const String& key, String& value)
 
   int keyStart = json.indexOf(keyJson);
   int valueStart = keyStart + keyJson.length();
-  int valueEnd = json.indexOf(',', valueStart);
-  value = "";
+  
+  int indexNextComma = json.indexOf(',', valueStart);
+  int indexNextBracket = json.indexOf('}', valueStart);
+  int valueEnd = indexNextComma;
+  if (valueEnd == -1 || (indexNextBracket > -1 && indexNextBracket < indexNextComma)) {
+    valueEnd = indexNextBracket;
+  }
 
+  value = "";
   if (keyStart > -1 && valueEnd > -1) {
     value = json.substring(valueStart, valueEnd);
   }
